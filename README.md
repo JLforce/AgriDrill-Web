@@ -21,18 +21,45 @@ AgriDrill-Web/
 				command/route.js
 				status/route.js
 				telemetry/route.js
+			landing/
+				page.js
+			login/
+				page.js
 			favicon.ico
 			globals.css
 			layout.js
 			page.js
+		components/
+			LoginModal.js
+			SignupModal.js
 		lib/
 			supabase/
 				client.js
 				server.js
 	public/
+		agridrill-logo.png
+		farming-tractor.jpg
+		icon-telemetry.png
+		autonomous-navigation.png
+		safety-first.png
+		telemetry-icon.jpg
+		field-routing.jpg
+		safety-protocol.jpg
+		obstacle-detection.png
+		icon-emergency.png
+		icon-protected.png
+		obstacle-avoidance.jpeg
+		emergency-stop.jpg
+		protected-planting.jpg
 	docs/
+		api-contract.md
+		roadmap-status.md
 	supabase/
+		schema.sql
 	.env.example
+	.eslintrc.json
+	.gitignore
+	jsconfig.json
 	next.config.mjs
 	package.json
 	postcss.config.mjs
@@ -41,20 +68,32 @@ AgriDrill-Web/
 
 ## Project Status
 
-This repository is initialized for **Phase 1** with:
+This repository is completed for **Phase 1** with:
 
-- Next.js 14 app scaffold
-- Supabase client setup (server + browser helpers)
-- API contract starter routes:
+- ✅ Next.js 14 app scaffold with JavaScript
+- ✅ Supabase client setup (server + browser helpers)
+- ✅ API contract starter routes:
 	- `POST /api/telemetry`
 	- `POST /api/command`
 	- `GET /api/status`
-- Starter SQL schema for:
+- ✅ Starter SQL schema for:
 	- `sessions`
 	- `telemetry_events`
 	- `planting_logs`
 	- `configurations`
 	- `fault_logs`
+- ✅ Landing page (`/landing`) with:
+	- Hero section with farming tractor image
+	- Features section (3 cards)
+	- Safety section (3 cards)
+	- Technology stack section
+	- Improved footer with 4-column layout
+- ✅ Authentication modals:
+	- Login modal with email/password
+	- Signup modal with full name, email, password confirmation
+	- Modal switching between login and signup
+- ✅ Custom Tailwind theme with AgriDrill branding
+- ✅ Entrance animations and button effects
 
 ## Local Development
 
@@ -123,6 +162,4 @@ Example body:
 
 Returns service health and key integration checks.
 
-## Notes on JavaScript Choice
 
-The roadmap originally listed TypeScript. This repo is now configured for JavaScript by design, while keeping a structure that can be migrated to TypeScript later if needed.

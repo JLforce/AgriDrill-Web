@@ -3,9 +3,16 @@
 import Link from "next/link";
 import Image from "next/image";
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 
 export default function LoginModal({ isOpen, onClose, onSwitchToSignup }) {
+  const router = useRouter();
   const [showPassword, setShowPassword] = useState(false);
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
 
   // Close modal on Escape key
   useEffect(() => {
@@ -36,6 +43,33 @@ export default function LoginModal({ isOpen, onClose, onSwitchToSignup }) {
   const handleBackdropClick = (e) => {
     if (e.target === e.currentTarget) {
       onClose();
+    }
+  };
+
+  const handleSignIn = async (e) => {
+    e.preventDefault();
+    setIsSubmitting(true);
+    setErrorMessage("");
+
+    try {
+      const supabase = getSupabaseBrowserClient();
+      const { error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+
+      if (error) {
+        setErrorMessage(error.message);
+        return;
+      }
+
+      onClose();
+      router.push("/dashboard");
+      router.refresh();
+    } catch (error) {
+      setErrorMessage(error?.message || "Unable to sign in. Please try again.");
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -83,13 +117,14 @@ export default function LoginModal({ isOpen, onClose, onSwitchToSignup }) {
             <p className="mt-2 text-gray-600">Sign in to your operator dashboard</p>
           </div>
 
-          <form
-            onSubmit={(e) => {
-              e.preventDefault();
-              // Handle login logic here
-            }}
-          >
+          <form onSubmit={handleSignIn}>
             <div className="space-y-5">
+              {errorMessage ? (
+                <p className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                  {errorMessage}
+                </p>
+              ) : null}
+
               <div>
                 <label htmlFor="modal-email" className="mb-2 block text-sm font-medium text-gray-900">
                   Email
@@ -99,7 +134,10 @@ export default function LoginModal({ isOpen, onClose, onSwitchToSignup }) {
                   id="modal-email"
                   name="email"
                   placeholder="operator@agridrill.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
                   className="w-full rounded-lg border border-gray-300 bg-gray-50 px-4 py-3 text-gray-900 placeholder-gray-500 transition focus:border-[#16d39a] focus:outline-none focus:ring-2 focus:ring-[#16d39a]/20"
+                  autoComplete="email"
                   required
                 />
               </div>
@@ -114,7 +152,10 @@ export default function LoginModal({ isOpen, onClose, onSwitchToSignup }) {
                     id="modal-password"
                     name="password"
                     placeholder="••••••••"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
                     className="w-full rounded-lg border border-gray-300 bg-gray-50 px-4 py-3 pr-12 text-gray-900 placeholder-gray-500 transition focus:border-[#16d39a] focus:outline-none focus:ring-2 focus:ring-[#16d39a]/20"
+                    autoComplete="current-password"
                     required
                   />
                   <button
@@ -178,9 +219,10 @@ export default function LoginModal({ isOpen, onClose, onSwitchToSignup }) {
 
               <button
                 type="submit"
-                className="w-full rounded-lg bg-[#16d39a] px-6 py-3 font-semibold text-white shadow-lg shadow-[#16d39a]/25 transition hover:bg-[#14c78f] hover:shadow-xl hover:shadow-[#16d39a]/30 active:scale-[0.98]"
+                disabled={isSubmitting}
+                className="w-full rounded-lg bg-[#16d39a] px-6 py-3 font-semibold text-white shadow-lg shadow-[#16d39a]/25 transition hover:bg-[#14c78f] hover:shadow-xl hover:shadow-[#16d39a]/30 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60"
               >
-                Sign In
+                {isSubmitting ? "Signing in..." : "Sign In"}
               </button>
             </div>
           </form>

@@ -11,6 +11,9 @@ create table if not exists public.sessions (
   created_at timestamptz not null default now()
 );
 
+alter table public.sessions
+  add column if not exists configuration_snapshot jsonb;
+
 create table if not exists public.telemetry_events (
   id bigint generated always as identity primary key,
   session_id uuid not null references public.sessions(id) on delete cascade,
@@ -45,6 +48,11 @@ create table if not exists public.configurations (
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
+
+alter table public.configurations
+  add column if not exists number_of_rows integer,
+  add column if not exists row_spacing_cm numeric(6,2),
+  add column if not exists session_notes text;
 
 create table if not exists public.fault_logs (
   id bigint generated always as identity primary key,

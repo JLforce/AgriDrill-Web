@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 
 const commandSchema = z.object({
-  command: z.enum(["START", "STOP", "RESUME", "MANUAL_PLANT", "MOVE", "DRILL"]),
+  command: z.enum(["START", "STOP", "RESUME", "MANUAL_PLANT", "MOVE", "DRILL", "APPLY_CONFIGURATION"]),
   payload: z.record(z.any()).default({}),
 });
 

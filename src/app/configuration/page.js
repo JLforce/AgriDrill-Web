@@ -1,11 +1,16 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
-import Link from "next/link";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Roboto } from "next/font/google";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
+
+const roboto = Roboto({
+  subsets: ["latin"],
+  weight: ["400", "500", "700", "900"],
+});
 
 const defaults = {
   bedLengthM: 10,
@@ -64,6 +69,9 @@ export default function ConfigurationPage() {
   const [selectedPresetId, setSelectedPresetId] = useState("");
   const [loading, setLoading] = useState(false);
   const [toast, setToast] = useState(null);
+  const [pageReady, setPageReady] = useState(false);
+  const [clickedButton, setClickedButton] = useState("");
+  const clickFeedbackTimeoutRef = useRef(null);
 
   const {
     register,
@@ -83,6 +91,16 @@ export default function ConfigurationPage() {
   const showToast = useCallback((type, message) => {
     setToast({ type, message });
     setTimeout(() => setToast(null), 3000);
+  }, []);
+
+  const triggerButtonFeedback = useCallback((key) => {
+    setClickedButton(key);
+    if (clickFeedbackTimeoutRef.current) {
+      clearTimeout(clickFeedbackTimeoutRef.current);
+    }
+    clickFeedbackTimeoutRef.current = setTimeout(() => {
+      setClickedButton("");
+    }, 180);
   }, []);
 
   const loadPresets = useCallback(async () => {
@@ -151,6 +169,22 @@ export default function ConfigurationPage() {
     loadPresets();
     loadActiveSummary();
   }, [loadPresets, loadActiveSummary]);
+
+  useEffect(() => {
+    const readyTimer = setTimeout(() => {
+      setPageReady(true);
+    }, 20);
+
+    return () => clearTimeout(readyTimer);
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (clickFeedbackTimeoutRef.current) {
+        clearTimeout(clickFeedbackTimeoutRef.current);
+      }
+    };
+  }, []);
 
   const handleSavePreset = async () => {
     if (!presetName.trim()) {
@@ -299,26 +333,27 @@ export default function ConfigurationPage() {
   const sectionTitleClassName = "text-[11px] font-bold uppercase tracking-[0.18em] text-[#5b7287]";
 
   return (
-    <main className="min-h-screen bg-[radial-gradient(circle_at_top_left,#dbeafe_0%,transparent_38%),radial-gradient(circle_at_top_right,#dcfce7_0%,transparent_32%),#eff3f8] text-[#0f172a]">
-      <header className="sticky top-0 z-20 border-b border-[#d9e2ec] bg-white/90 backdrop-blur-md shadow-[0_8px_24px_rgba(15,23,42,0.08)]">
+    <main className={`${roboto.className} min-h-screen bg-[#f1f5f9] text-[#0f172a] antialiased`}>
+      <header
+        className={`sticky top-0 z-20 border-b border-[#1d4ed8] bg-[#2563eb]/95 backdrop-blur-md shadow-[0_8px_24px_rgba(37,99,235,0.35)] transition-all duration-700 ${
+          pageReady ? "translate-y-0 opacity-100" : "-translate-y-2 opacity-0"
+        }`}
+      >
         <div className="mx-auto flex max-w-[1280px] items-center justify-between px-5 py-4">
           <div className="flex items-center gap-4">
-            <Link href="/dashboard" className="rounded-xl border border-[#d8e0ea] bg-[#f8fbff] px-4 py-2 text-xs font-semibold uppercase tracking-wide text-[#4b6479] transition hover:bg-white hover:text-[#1e3a56]">
-              Back to Dashboard
-            </Link>
             <div>
-              <p className="text-[10px] font-semibold uppercase tracking-[0.24em] text-[#3b82f6]">AgriDrill Operations</p>
-              <h1 className="text-2xl font-extrabold tracking-tight text-[#0f172a]">Field Configuration Console</h1>
+              <p className="text-[10px] font-semibold uppercase tracking-[0.24em] text-[#bfdbfe]">AgriDrill Operations</p>
+              <h1 className="text-2xl font-extrabold tracking-tight text-white">Field Configuration Console</h1>
             </div>
           </div>
-          <span className="hidden rounded-full border border-[#bfdbfe] bg-[#eff6ff] px-3 py-1 text-[11px] font-semibold uppercase tracking-wide text-[#1d4ed8] md:inline-block">
+          <span className="hidden rounded-full border border-[#60a5fa] bg-[#1d4ed8] px-3 py-1 text-[11px] font-semibold uppercase tracking-wide text-[#dbeafe] md:inline-block">
             Pre-Session Setup
           </span>
         </div>
       </header>
 
       {toast ? (
-        <div className="fixed right-4 top-24 z-50">
+        <div className="fixed right-4 top-24 z-50 transition-all duration-300 animate-[fadeIn_0.25s_ease-out]">
           <div className={`rounded-xl border px-4 py-2.5 text-sm font-semibold shadow-[0_16px_32px_rgba(15,23,42,0.16)] ${toast.type === "success" ? "border-[#bbf7d0] bg-[#f0fdf4] text-[#15803d]" : "border-[#fecaca] bg-[#fef2f2] text-[#b91c1c]"}`}>
             {toast.message}
           </div>
@@ -326,7 +361,7 @@ export default function ConfigurationPage() {
       ) : null}
 
       <form onSubmit={handleSubmit(onApplyConfiguration)} className="mx-auto grid w-full max-w-[1280px] gap-5 p-5 xl:grid-cols-[1.45fr_0.95fr]">
-        <div className="space-y-5">
+        <div className={`space-y-5 transition-all duration-700 delay-100 ${pageReady ? "translate-y-0 opacity-100" : "translate-y-3 opacity-0"}`}>
           <section className="rounded-3xl border border-[#d8e0ea] bg-white/90 p-5 shadow-[0_18px_36px_rgba(15,23,42,0.08)]">
             <p className={sectionTitleClassName}>Section A - Active Configuration Summary</p>
             <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
@@ -402,7 +437,7 @@ export default function ConfigurationPage() {
           </section>
         </div>
 
-        <div className="space-y-5">
+        <div className={`space-y-5 transition-all duration-700 delay-200 ${pageReady ? "translate-y-0 opacity-100" : "translate-y-3 opacity-0"}`}>
           <section className="rounded-3xl border border-[#d8e0ea] bg-white/90 p-5 shadow-[0_18px_36px_rgba(15,23,42,0.08)]">
             <p className={sectionTitleClassName}>Section C - Preset Management</p>
             <div className="mt-4 space-y-3">
@@ -418,9 +453,14 @@ export default function ConfigurationPage() {
               </div>
               <button
                 type="button"
-                onClick={handleSavePreset}
+                onClick={() => {
+                  triggerButtonFeedback("save-preset");
+                  handleSavePreset();
+                }}
                 disabled={loading || isSubmitting}
-                className="w-full rounded-xl border border-[#2563eb] bg-[#3b82f6] px-4 py-2.5 text-sm font-semibold text-white shadow-[0_10px_20px_rgba(37,99,235,0.22)] transition hover:bg-[#2563eb] disabled:cursor-not-allowed disabled:opacity-60"
+                className={`w-full rounded-xl border border-[#2563eb] bg-[#3b82f6] px-4 py-2.5 text-sm font-semibold text-white shadow-[0_10px_20px_rgba(37,99,235,0.22)] transition hover:bg-[#2563eb] disabled:cursor-not-allowed disabled:opacity-60 ${
+                  clickedButton === "save-preset" ? "scale-[0.98]" : ""
+                }`}
               >
                 Save as Preset
               </button>
@@ -444,17 +484,27 @@ export default function ConfigurationPage() {
               <div className="grid grid-cols-2 gap-2">
                 <button
                   type="button"
-                  onClick={handleLoadPreset}
+                  onClick={() => {
+                    triggerButtonFeedback("load-preset");
+                    handleLoadPreset();
+                  }}
                   disabled={loading || isSubmitting}
-                  className="rounded-xl border border-[#cbd5e1] bg-[#f8fafc] px-4 py-2.5 text-sm font-semibold text-[#334155] transition hover:bg-[#e2e8f0] disabled:cursor-not-allowed disabled:opacity-60"
+                  className={`rounded-xl border border-[#cbd5e1] bg-[#f8fafc] px-4 py-2.5 text-sm font-semibold text-[#334155] transition hover:bg-[#e2e8f0] disabled:cursor-not-allowed disabled:opacity-60 ${
+                    clickedButton === "load-preset" ? "scale-[0.98]" : ""
+                  }`}
                 >
                   Load
                 </button>
                 <button
                   type="button"
-                  onClick={handleDeletePreset}
+                  onClick={() => {
+                    triggerButtonFeedback("delete-preset");
+                    handleDeletePreset();
+                  }}
                   disabled={loading || isSubmitting}
-                  className="rounded-xl border border-[#fecaca] bg-[#fef2f2] px-4 py-2.5 text-sm font-semibold text-[#b91c1c] transition hover:bg-[#fee2e2] disabled:cursor-not-allowed disabled:opacity-60"
+                  className={`rounded-xl border border-[#fecaca] bg-[#fef2f2] px-4 py-2.5 text-sm font-semibold text-[#b91c1c] transition hover:bg-[#fee2e2] disabled:cursor-not-allowed disabled:opacity-60 ${
+                    clickedButton === "delete-preset" ? "scale-[0.98]" : ""
+                  }`}
                 >
                   Delete
                 </button>
@@ -467,16 +517,24 @@ export default function ConfigurationPage() {
             <div className="mt-4 space-y-2.5">
               <button
                 type="submit"
+                onClick={() => triggerButtonFeedback("apply")}
                 disabled={loading || isSubmitting}
-                className="w-full rounded-xl border border-[#16a34a] bg-[#16a34a] px-5 py-2.5 text-sm font-semibold text-white shadow-[0_10px_20px_rgba(22,163,74,0.24)] transition hover:bg-[#15803d] disabled:cursor-not-allowed disabled:opacity-60"
+                className={`w-full rounded-xl border border-[#16a34a] bg-[#16a34a] px-5 py-2.5 text-sm font-semibold text-white shadow-[0_10px_20px_rgba(22,163,74,0.24)] transition hover:bg-[#15803d] disabled:cursor-not-allowed disabled:opacity-60 ${
+                  clickedButton === "apply" ? "scale-[0.98]" : ""
+                }`}
               >
                 Apply Configuration
               </button>
               <button
                 type="button"
-                onClick={() => reset(defaults)}
+                onClick={() => {
+                  triggerButtonFeedback("reset");
+                  reset(defaults);
+                }}
                 disabled={loading || isSubmitting}
-                className="w-full rounded-xl border border-[#cbd5e1] bg-[#f8fafc] px-5 py-2.5 text-sm font-semibold text-[#334155] transition hover:bg-[#e2e8f0] disabled:cursor-not-allowed disabled:opacity-60"
+                className={`w-full rounded-xl border border-[#cbd5e1] bg-[#f8fafc] px-5 py-2.5 text-sm font-semibold text-[#334155] transition hover:bg-[#e2e8f0] disabled:cursor-not-allowed disabled:opacity-60 ${
+                  clickedButton === "reset" ? "scale-[0.98]" : ""
+                }`}
               >
                 Reset to Defaults
               </button>

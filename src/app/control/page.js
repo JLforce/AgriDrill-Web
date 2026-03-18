@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import Link from "next/link";
+import { Roboto } from "next/font/google";
 
 const SPEED_PRESETS = [0.1, 0.3, 0.5];
 
@@ -12,6 +12,11 @@ const PLANTING_ACTIONS = [
 ];
 
 const PLANTING_ICONS = { drill: "⬡", seed: "◈", tray: "▤" };
+
+const roboto = Roboto({
+  subsets: ["latin"],
+  weight: ["400", "500", "700", "900"],
+});
 
 function nowTimeStamp() {
   return new Date().toLocaleTimeString("en-GB", {
@@ -41,11 +46,14 @@ export default function ControlPage() {
   const [commandLog, setCommandLog] = useState([]);
   const [activeMove, setActiveMove] = useState(null);
   const [actionStates, setActionStates] = useState({ drill: "idle", seed: "idle", tray: "idle" });
+  const [pageReady, setPageReady] = useState(false);
+  const [clickedControl, setClickedControl] = useState("");
 
   const holdIntervalRef = useRef(null);
   const speedDebounceRef = useRef(null);
   const latestSpeedIndexRef = useRef(1);
   const actionTimeoutsRef = useRef([]);
+  const clickFeedbackTimeoutRef = useRef(null);
 
   const isManual = mode === "MANUAL";
   const currentSpeed = SPEED_PRESETS[speedIndex];
@@ -122,6 +130,24 @@ export default function ControlPage() {
     [isManual, issueCommand],
   );
 
+  const triggerClickFeedback = useCallback((key) => {
+    setClickedControl(key);
+    if (clickFeedbackTimeoutRef.current) {
+      clearTimeout(clickFeedbackTimeoutRef.current);
+    }
+    clickFeedbackTimeoutRef.current = setTimeout(() => {
+      setClickedControl("");
+    }, 190);
+  }, []);
+
+  useEffect(() => {
+    const readyTimer = setTimeout(() => {
+      setPageReady(true);
+    }, 20);
+
+    return () => clearTimeout(readyTimer);
+  }, []);
+
   useEffect(() => {
     const onKeyDown = (event) => {
       const tag = event.target?.tagName;
@@ -175,26 +201,27 @@ export default function ControlPage() {
       if (speedDebounceRef.current) {
         clearTimeout(speedDebounceRef.current);
       }
+      if (clickFeedbackTimeoutRef.current) {
+        clearTimeout(clickFeedbackTimeoutRef.current);
+      }
       actionTimeoutsRef.current.forEach((timeoutId) => clearTimeout(timeoutId));
       actionTimeoutsRef.current = [];
     };
   }, [activeMove, startHold, stopHold]);
 
   return (
-    <main className="min-h-screen bg-[#f1f5f9] text-[#0f172a]">
+    <main className={`${roboto.className} min-h-screen bg-[#f1f5f9] text-[#0f172a] antialiased`}>
       {/* ── HEADER ─────────────────────────────────────────────── */}
-      <header className="sticky top-0 z-20 border-b border-[#e2e8f0] bg-white/95 backdrop-blur-md shadow-[0_2px_12px_rgba(15,23,42,0.07)]">
+      <header
+        className={`sticky top-0 z-20 border-b border-[#1d4ed8] bg-[#2563eb]/95 backdrop-blur-md shadow-[0_8px_24px_rgba(37,99,235,0.35)] transition-all duration-700 ${
+          pageReady ? "translate-y-0 opacity-100" : "-translate-y-2 opacity-0"
+        }`}
+      >
         <div className="mx-auto flex max-w-[1280px] items-center justify-between px-5 py-3">
           <div className="flex items-center gap-4">
-            <Link
-              href="/dashboard"
-              className="rounded-lg border border-[#e2e8f0] bg-[#f8fafc] px-3 py-1.5 text-xs font-semibold text-[#64748b] transition hover:border-[#cbd5e1] hover:text-[#334155]"
-            >
-              ← Back
-            </Link>
             <div>
-              <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[#3b82f6]">AgriDrill · Operator Console</p>
-              <h1 className="text-xl font-extrabold leading-tight tracking-tight text-[#0f172a]">Robot Control</h1>
+              <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-[#bfdbfe]">AgriDrill · Operator Console</p>
+              <h1 className="text-2xl font-extrabold leading-tight tracking-[-0.01em] text-white">Robot Control</h1>
             </div>
           </div>
           <div className="flex items-center gap-3">
@@ -204,8 +231,11 @@ export default function ControlPage() {
             </span>
             <button
               type="button"
-              className="rounded-xl border-2 border-[#b91c1c] bg-[#dc2626] px-5 py-2 text-sm font-extrabold uppercase tracking-widest text-white shadow-[0_2px_12px_rgba(220,38,38,0.3)] transition hover:bg-[#b91c1c] active:scale-95"
+              className={`rounded-xl border-2 border-[#b91c1c] bg-[#dc2626] px-5 py-2 text-sm font-extrabold uppercase tracking-widest text-white shadow-[0_2px_12px_rgba(220,38,38,0.3)] transition hover:bg-[#b91c1c] active:scale-95 ${
+                clickedControl === "estop" ? "scale-[0.97] shadow-[0_0_0_4px_rgba(220,38,38,0.24)]" : ""
+              }`}
               onClick={() => {
+                triggerClickFeedback("estop");
                 issueCommand("E-STOP", true);
                 stopHold();
               }}
@@ -217,18 +247,25 @@ export default function ControlPage() {
       </header>
 
       {/* ── MODE BANNER ──────────────────────────────────────────────── */}
-      <div className={`border-b px-5 py-2.5 ${isManual ? "border-[#bbf7d0] bg-[#f0fdf4]" : "border-[#fecaca] bg-[#fef2f2]"}`}>
+      <div
+        className={`border-b px-5 py-2.5 transition-all duration-700 delay-100 ${
+          pageReady ? "translate-y-0 opacity-100" : "-translate-y-2 opacity-0"
+        } ${isManual ? "border-[#bbf7d0] bg-[#f0fdf4]" : "border-[#fecaca] bg-[#fef2f2]"}`}
+      >
         <div className="mx-auto flex max-w-[1280px] items-center justify-between">
           <div className="flex items-center gap-2.5">
             <span className={`h-2 w-2 rounded-full ${isManual ? "animate-pulse bg-[#16a34a] shadow-[0_0_8px_rgba(22,163,74,0.5)]" : "bg-[#dc2626] shadow-[0_0_8px_rgba(220,38,38,0.4)]"}`} />
-            <span className={`text-xs font-bold uppercase tracking-[0.15em] ${isManual ? "text-[#15803d]" : "text-[#dc2626]"}`}>
+            <span className={`text-xs font-semibold uppercase tracking-[0.12em] ${isManual ? "text-[#15803d]" : "text-[#dc2626]"}`}>
               {isManual ? "Manual Mode Active — Operator Controls Enabled" : "Autonomous Mode — Operator Controls Locked"}
             </span>
           </div>
           <button
             type="button"
-            className="rounded-lg border border-[#e2e8f0] bg-white px-3 py-1.5 text-[11px] font-semibold text-[#475569] transition hover:border-[#cbd5e1] hover:text-[#334155]"
+            className={`rounded-lg border border-[#e2e8f0] bg-white px-3 py-1.5 text-[11px] font-semibold text-[#475569] transition hover:border-[#cbd5e1] hover:text-[#334155] ${
+              clickedControl === "mode-toggle" ? "scale-[0.97] shadow-[0_0_0_4px_rgba(148,163,184,0.2)]" : ""
+            }`}
             onClick={() => {
+              triggerClickFeedback("mode-toggle");
               const nextMode = isManual ? "AUTONOMOUS" : "MANUAL";
               const msg = isManual
                 ? "Return robot to AUTONOMOUS mode? Operator controls will be locked."
@@ -245,13 +282,17 @@ export default function ControlPage() {
       </div>
 
       {/* ── MAIN GRID ────────────────────────────────────────────────── */}
-      <div className="mx-auto grid max-w-[1280px] gap-4 p-5 lg:grid-cols-[1.1fr_0.9fr]">
+      <div
+        className={`mx-auto grid max-w-[1280px] gap-4 p-5 lg:grid-cols-[1.1fr_0.9fr] transition-all duration-700 delay-200 ${
+          pageReady ? "translate-y-0 opacity-100" : "translate-y-3 opacity-0"
+        }`}
+      >
         {/* D-PAD */}
         <section className="rounded-2xl border border-[#e2e8f0] bg-white p-5 shadow-[0_4px_16px_rgba(15,23,42,0.06)]">
           <div className="mb-5 flex items-center justify-between">
             <div>
               <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#3b82f6]">Movement Control</p>
-              <p className="mt-0.5 text-[11px] text-[#64748b]">Hold button or key · W A S D · Space = Stop</p>
+              <p className="mt-0.5 text-xs font-medium text-[#64748b]">Hold button or key · W A S D · Space = Stop</p>
             </div>
             <span className={`rounded-full border px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide ${isManual ? "border-[#bbf7d0] text-[#15803d]" : "border-[#e2e8f0] text-[#94a3b8]"}`}>
               {isManual ? "● active" : "○ locked"}
@@ -263,12 +304,15 @@ export default function ControlPage() {
               <button
                 type="button"
                 disabled={!isManual}
-                onMouseDown={() => startHold("Move Forward")}
+                onMouseDown={() => {
+                  triggerClickFeedback("move-forward");
+                  startHold("Move Forward");
+                }}
                 onMouseUp={stopHold}
                 onMouseLeave={stopHold}
                 onTouchStart={() => startHold("Move Forward")}
                 onTouchEnd={stopHold}
-                className={`flex flex-col items-center justify-center rounded-2xl border py-5 transition active:scale-95 ${activeMove === "Move Forward" ? "border-[#3b82f6] bg-[#eff6ff] text-[#2563eb] shadow-[0_0_0_3px_rgba(59,130,246,0.15)]" : "border-[#e2e8f0] bg-[#f8fafc] text-[#475569] hover:border-[#cbd5e1] hover:text-[#334155]"}`}
+                className={`flex flex-col items-center justify-center rounded-2xl border py-5 transition active:scale-95 ${activeMove === "Move Forward" ? "border-[#3b82f6] bg-[#eff6ff] text-[#2563eb] shadow-[0_0_0_3px_rgba(59,130,246,0.15)]" : "border-[#e2e8f0] bg-[#f8fafc] text-[#475569] hover:border-[#cbd5e1] hover:text-[#334155]"} ${clickedControl === "move-forward" ? "scale-[0.96]" : ""}`}
               >
                 <span className="text-2xl leading-none">▲</span>
                 <span className="mt-1 text-[9px] font-bold uppercase tracking-widest">FWD</span>
@@ -277,12 +321,15 @@ export default function ControlPage() {
               <button
                 type="button"
                 disabled={!isManual}
-                onMouseDown={() => startHold("Turn Left")}
+                onMouseDown={() => {
+                  triggerClickFeedback("turn-left");
+                  startHold("Turn Left");
+                }}
                 onMouseUp={stopHold}
                 onMouseLeave={stopHold}
                 onTouchStart={() => startHold("Turn Left")}
                 onTouchEnd={stopHold}
-                className={`flex flex-col items-center justify-center rounded-2xl border py-5 transition active:scale-95 ${activeMove === "Turn Left" ? "border-[#3b82f6] bg-[#eff6ff] text-[#2563eb] shadow-[0_0_0_3px_rgba(59,130,246,0.15)]" : "border-[#e2e8f0] bg-[#f8fafc] text-[#475569] hover:border-[#cbd5e1] hover:text-[#334155]"}`}
+                className={`flex flex-col items-center justify-center rounded-2xl border py-5 transition active:scale-95 ${activeMove === "Turn Left" ? "border-[#3b82f6] bg-[#eff6ff] text-[#2563eb] shadow-[0_0_0_3px_rgba(59,130,246,0.15)]" : "border-[#e2e8f0] bg-[#f8fafc] text-[#475569] hover:border-[#cbd5e1] hover:text-[#334155]"} ${clickedControl === "turn-left" ? "scale-[0.96]" : ""}`}
               >
                 <span className="text-2xl leading-none">◄</span>
                 <span className="mt-1 text-[9px] font-bold uppercase tracking-widest">LEFT</span>
@@ -290,12 +337,15 @@ export default function ControlPage() {
               <button
                 type="button"
                 disabled={!isManual}
-                onMouseDown={() => startHold("Stop")}
+                onMouseDown={() => {
+                  triggerClickFeedback("stop");
+                  startHold("Stop");
+                }}
                 onMouseUp={stopHold}
                 onMouseLeave={stopHold}
                 onTouchStart={() => startHold("Stop")}
                 onTouchEnd={stopHold}
-                className={`flex flex-col items-center justify-center rounded-2xl border py-5 transition active:scale-95 ${activeMove === "Stop" ? "border-[#dc2626] bg-[#fef2f2] text-[#b91c1c] shadow-[0_0_0_3px_rgba(220,38,38,0.15)]" : "border-[#fca5a5] bg-[#fff5f5] text-[#dc2626] hover:bg-[#fef2f2] hover:border-[#f87171]"}`}
+                className={`flex flex-col items-center justify-center rounded-2xl border py-5 transition active:scale-95 ${activeMove === "Stop" ? "border-[#dc2626] bg-[#fef2f2] text-[#b91c1c] shadow-[0_0_0_3px_rgba(220,38,38,0.15)]" : "border-[#fca5a5] bg-[#fff5f5] text-[#dc2626] hover:bg-[#fef2f2] hover:border-[#f87171]"} ${clickedControl === "stop" ? "scale-[0.96]" : ""}`}
               >
                 <span className="text-2xl font-extrabold leading-none">■</span>
                 <span className="mt-1 text-[9px] font-bold uppercase tracking-widest">STOP</span>
@@ -303,12 +353,15 @@ export default function ControlPage() {
               <button
                 type="button"
                 disabled={!isManual}
-                onMouseDown={() => startHold("Turn Right")}
+                onMouseDown={() => {
+                  triggerClickFeedback("turn-right");
+                  startHold("Turn Right");
+                }}
                 onMouseUp={stopHold}
                 onMouseLeave={stopHold}
                 onTouchStart={() => startHold("Turn Right")}
                 onTouchEnd={stopHold}
-                className={`flex flex-col items-center justify-center rounded-2xl border py-5 transition active:scale-95 ${activeMove === "Turn Right" ? "border-[#3b82f6] bg-[#eff6ff] text-[#2563eb] shadow-[0_0_0_3px_rgba(59,130,246,0.15)]" : "border-[#e2e8f0] bg-[#f8fafc] text-[#475569] hover:border-[#cbd5e1] hover:text-[#334155]"}`}
+                className={`flex flex-col items-center justify-center rounded-2xl border py-5 transition active:scale-95 ${activeMove === "Turn Right" ? "border-[#3b82f6] bg-[#eff6ff] text-[#2563eb] shadow-[0_0_0_3px_rgba(59,130,246,0.15)]" : "border-[#e2e8f0] bg-[#f8fafc] text-[#475569] hover:border-[#cbd5e1] hover:text-[#334155]"} ${clickedControl === "turn-right" ? "scale-[0.96]" : ""}`}
               >
                 <span className="text-2xl leading-none">►</span>
                 <span className="mt-1 text-[9px] font-bold uppercase tracking-widest">RIGHT</span>
@@ -317,12 +370,15 @@ export default function ControlPage() {
               <button
                 type="button"
                 disabled={!isManual}
-                onMouseDown={() => startHold("Move Backward")}
+                onMouseDown={() => {
+                  triggerClickFeedback("move-backward");
+                  startHold("Move Backward");
+                }}
                 onMouseUp={stopHold}
                 onMouseLeave={stopHold}
                 onTouchStart={() => startHold("Move Backward")}
                 onTouchEnd={stopHold}
-                className={`flex flex-col items-center justify-center rounded-2xl border py-5 transition active:scale-95 ${activeMove === "Move Backward" ? "border-[#3b82f6] bg-[#eff6ff] text-[#2563eb] shadow-[0_0_0_3px_rgba(59,130,246,0.15)]" : "border-[#e2e8f0] bg-[#f8fafc] text-[#475569] hover:border-[#cbd5e1] hover:text-[#334155]"}`}
+                className={`flex flex-col items-center justify-center rounded-2xl border py-5 transition active:scale-95 ${activeMove === "Move Backward" ? "border-[#3b82f6] bg-[#eff6ff] text-[#2563eb] shadow-[0_0_0_3px_rgba(59,130,246,0.15)]" : "border-[#e2e8f0] bg-[#f8fafc] text-[#475569] hover:border-[#cbd5e1] hover:text-[#334155]"} ${clickedControl === "move-backward" ? "scale-[0.96]" : ""}`}
               >
                 <span className="text-2xl leading-none">▼</span>
                 <span className="mt-1 text-[9px] font-bold uppercase tracking-widest">BACK</span>
@@ -349,11 +405,12 @@ export default function ControlPage() {
                   type="button"
                   disabled={!isManual}
                   onClick={() => {
+                    triggerClickFeedback(`speed-${i}`);
                     latestSpeedIndexRef.current = i;
                     setSpeedIndex(i);
                     issueCommand(`Set Speed ${preset.toFixed(1)} m/s`);
                   }}
-                  className={`flex flex-1 flex-col items-center rounded-xl border py-4 transition active:scale-95 ${speedIndex === i ? "border-[#f59e0b] bg-[#fffbeb] text-[#b45309] shadow-[0_0_0_3px_rgba(245,158,11,0.12)]" : "border-[#e2e8f0] bg-[#f8fafc] text-[#64748b] hover:border-[#cbd5e1] hover:text-[#334155]"}`}
+                  className={`flex flex-1 flex-col items-center rounded-xl border py-4 transition active:scale-95 ${speedIndex === i ? "border-[#f59e0b] bg-[#fffbeb] text-[#b45309] shadow-[0_0_0_3px_rgba(245,158,11,0.12)]" : "border-[#e2e8f0] bg-[#f8fafc] text-[#64748b] hover:border-[#cbd5e1] hover:text-[#334155]"} ${clickedControl === `speed-${i}` ? "scale-[0.96]" : ""}`}
                 >
                   <span className="text-lg font-extrabold tabular-nums">{preset.toFixed(1)}</span>
                   <span className="mt-0.5 text-[9px] font-bold uppercase tracking-widest opacity-70">{["Slow", "Med", "Fast"][i]}</span>
@@ -371,7 +428,10 @@ export default function ControlPage() {
                   key={item.key}
                   type="button"
                   disabled={!isManual || actionStates[item.key] === "active"}
-                  onClick={() => runPlantingAction(item.key, item.label)}
+                  onClick={() => {
+                    triggerClickFeedback(`plant-${item.key}`);
+                    runPlantingAction(item.key, item.label);
+                  }}
                   className={`flex flex-col items-center rounded-xl border py-5 text-sm font-bold transition active:scale-95 ${
                     actionStates[item.key] === "active"
                       ? "border-[#bfdbfe] bg-[#eff6ff] text-[#2563eb]"
@@ -380,7 +440,7 @@ export default function ControlPage() {
                       : actionStates[item.key] === "error"
                       ? "border-[#fca5a5] bg-[#fef2f2] text-[#dc2626]"
                       : "border-[#e2e8f0] bg-[#f8fafc] text-[#475569] hover:border-[#bbf7d0] hover:text-[#16a34a]"
-                  }`}
+                  } ${clickedControl === `plant-${item.key}` ? "scale-[0.96]" : ""}`}
                 >
                   <span className="text-3xl leading-none">{PLANTING_ICONS[item.key]}</span>
                   <span className="mt-2 text-xs font-semibold">{item.label}</span>
@@ -395,7 +455,11 @@ export default function ControlPage() {
       </div>
 
       {/* ── COMMAND LOG ──────────────────────────────────────────────── */}
-      <section className="mx-auto max-w-[1280px] px-5 pb-8">
+      <section
+        className={`mx-auto max-w-[1280px] px-5 pb-8 transition-all duration-700 delay-300 ${
+          pageReady ? "translate-y-0 opacity-100" : "translate-y-3 opacity-0"
+        }`}
+      >
         <div className="rounded-2xl border border-[#e2e8f0] bg-white p-5 shadow-[0_4px_16px_rgba(15,23,42,0.06)]">
           <div className="mb-3 flex items-center justify-between">
             <div className="flex items-center gap-2">

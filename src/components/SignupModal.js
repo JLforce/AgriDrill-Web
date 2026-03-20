@@ -3,10 +3,18 @@
 import Link from "next/link";
 import Image from "next/image";
 import { useState, useEffect } from "react";
+import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 
 export default function SignupModal({ isOpen, onClose, onSwitchToLogin }) {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [fullName, setFullName] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
+  const [successMessage, setSuccessMessage] = useState("");
 
   // Close modal on Escape key
   useEffect(() => {
@@ -37,6 +45,47 @@ export default function SignupModal({ isOpen, onClose, onSwitchToLogin }) {
   const handleBackdropClick = (e) => {
     if (e.target === e.currentTarget) {
       onClose();
+    }
+  };
+
+  const handleSignUp = async (e) => {
+    e.preventDefault();
+    setErrorMessage("");
+    setSuccessMessage("");
+
+    if (password !== confirmPassword) {
+      setErrorMessage("Passwords do not match.");
+      return;
+    }
+
+    setIsSubmitting(true);
+
+    try {
+      const supabase = getSupabaseBrowserClient();
+      const { error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: {
+            full_name: fullName,
+          },
+        },
+      });
+
+      if (error) {
+        setErrorMessage(error.message);
+        return;
+      }
+
+      setSuccessMessage("Account created. Please check your email to verify your account before signing in.");
+      setFullName("");
+      setEmail("");
+      setPassword("");
+      setConfirmPassword("");
+    } catch (error) {
+      setErrorMessage(error?.message || "Unable to create account. Please try again.");
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -84,13 +133,20 @@ export default function SignupModal({ isOpen, onClose, onSwitchToLogin }) {
             <p className="mt-2 text-gray-600">Start managing your autonomous drilling operations</p>
           </div>
 
-          <form
-            onSubmit={(e) => {
-              e.preventDefault();
-              // Handle signup logic here
-            }}
-          >
+          <form onSubmit={handleSignUp}>
             <div className="space-y-5">
+              {errorMessage ? (
+                <p className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                  {errorMessage}
+                </p>
+              ) : null}
+
+              {successMessage ? (
+                <p className="rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-700">
+                  {successMessage}
+                </p>
+              ) : null}
+
               <div>
                 <label htmlFor="signup-fullname" className="mb-2 block text-sm font-medium text-gray-900">
                   Full Name
@@ -100,6 +156,8 @@ export default function SignupModal({ isOpen, onClose, onSwitchToLogin }) {
                   id="signup-fullname"
                   name="fullname"
                   placeholder="John Doe"
+                  value={fullName}
+                  onChange={(e) => setFullName(e.target.value)}
                   className="w-full rounded-lg border border-gray-300 bg-gray-50 px-4 py-3 text-gray-900 placeholder-gray-500 transition focus:border-[#16d39a] focus:outline-none focus:ring-2 focus:ring-[#16d39a]/20"
                   required
                 />
@@ -114,6 +172,8 @@ export default function SignupModal({ isOpen, onClose, onSwitchToLogin }) {
                   id="signup-email"
                   name="email"
                   placeholder="operator@agridrill.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
                   className="w-full rounded-lg border border-gray-300 bg-gray-50 px-4 py-3 text-gray-900 placeholder-gray-500 transition focus:border-[#16d39a] focus:outline-none focus:ring-2 focus:ring-[#16d39a]/20"
                   required
                 />
@@ -129,6 +189,8 @@ export default function SignupModal({ isOpen, onClose, onSwitchToLogin }) {
                     id="signup-password"
                     name="password"
                     placeholder="••••••••"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
                     className="w-full rounded-lg border border-gray-300 bg-gray-50 px-4 py-3 pr-12 text-gray-900 placeholder-gray-500 transition focus:border-[#16d39a] focus:outline-none focus:ring-2 focus:ring-[#16d39a]/20"
                     required
                   />
@@ -177,6 +239,8 @@ export default function SignupModal({ isOpen, onClose, onSwitchToLogin }) {
                     id="signup-confirm-password"
                     name="confirmPassword"
                     placeholder="••••••••"
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
                     className="w-full rounded-lg border border-gray-300 bg-gray-50 px-4 py-3 pr-12 text-gray-900 placeholder-gray-500 transition focus:border-[#16d39a] focus:outline-none focus:ring-2 focus:ring-[#16d39a]/20"
                     required
                   />
@@ -237,9 +301,10 @@ export default function SignupModal({ isOpen, onClose, onSwitchToLogin }) {
 
               <button
                 type="submit"
-                className="w-full rounded-lg bg-[#16d39a] px-6 py-3 font-semibold text-white shadow-lg shadow-[#16d39a]/25 transition hover:bg-[#14c78f] hover:shadow-xl hover:shadow-[#16d39a]/30 active:scale-[0.98]"
+                disabled={isSubmitting}
+                className="w-full rounded-lg bg-[#16d39a] px-6 py-3 font-semibold text-white shadow-lg shadow-[#16d39a]/25 transition hover:bg-[#14c78f] hover:shadow-xl hover:shadow-[#16d39a]/30 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60"
               >
-                Create Account
+                {isSubmitting ? "Creating account..." : "Create Account"}
               </button>
             </div>
           </form>

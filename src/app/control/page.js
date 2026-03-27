@@ -213,7 +213,7 @@ export default function ControlPage() {
     <main className={`${roboto.className} min-h-screen bg-[#f1f5f9] text-[#0f172a] antialiased`}>
       {/* ── HEADER ─────────────────────────────────────────────── */}
       <header
-        className={`sticky top-0 z-20 border-b border-[#1d4ed8] bg-[#2563eb]/95 backdrop-blur-md shadow-[0_8px_24px_rgba(37,99,235,0.35)] transition-all duration-700 ${
+        className={`sticky top-0 z-20 border-b border-[#1d4ed8] bg-blue-600 backdrop-blur-md shadow-[0_8px_24px_rgba(37,99,235,0.35)] transition-all duration-700 ${
           pageReady ? "translate-y-0 opacity-100" : "-translate-y-2 opacity-0"
         }`}
       >
@@ -283,7 +283,7 @@ export default function ControlPage() {
 
       {/* ── MAIN GRID ────────────────────────────────────────────────── */}
       <div
-        className={`mx-auto grid max-w-[1280px] gap-4 p-5 lg:grid-cols-[1.1fr_0.9fr] transition-all duration-700 delay-200 ${
+        className={`mx-auto grid max-w-[1280px] gap-4 p-5 lg:grid-cols-[1fr_1fr] transition-all duration-700 delay-200 ${
           pageReady ? "translate-y-0 opacity-100" : "translate-y-3 opacity-0"
         }`}
       >
@@ -390,67 +390,62 @@ export default function ControlPage() {
 
         {/* RIGHT: Speed + Planting */}
         <div className="flex flex-col gap-4">
-          {/* Speed */}
-          <section className="rounded-2xl border border-[#e2e8f0] bg-white p-5 shadow-[0_4px_16px_rgba(15,23,42,0.06)]">
-            <div className="mb-4 flex items-center justify-between">
-              <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#d97706]">Speed Control</p>
-              <span className={`rounded-lg border border-[#e2e8f0] bg-[#f8fafc] px-3 py-1 font-extrabold tabular-nums leading-none ${isManual ? "text-[#b45309]" : "text-[#94a3b8]"}`}>
-                {currentSpeed.toFixed(1)} <span className="text-[11px] font-medium text-[#94a3b8]">m/s</span>
-              </span>
-            </div>
-            <div className={`flex gap-2 transition-opacity ${isManual ? "" : "opacity-25 pointer-events-none"}`}>
-              {SPEED_PRESETS.map((preset, i) => (
-                <button
-                  key={preset}
-                  type="button"
-                  disabled={!isManual}
-                  onClick={() => {
-                    triggerClickFeedback(`speed-${i}`);
-                    latestSpeedIndexRef.current = i;
-                    setSpeedIndex(i);
-                    issueCommand(`Set Speed ${preset.toFixed(1)} m/s`);
-                  }}
-                  className={`flex flex-1 flex-col items-center rounded-xl border py-4 transition active:scale-95 ${speedIndex === i ? "border-[#f59e0b] bg-[#fffbeb] text-[#b45309] shadow-[0_0_0_3px_rgba(245,158,11,0.12)]" : "border-[#e2e8f0] bg-[#f8fafc] text-[#64748b] hover:border-[#cbd5e1] hover:text-[#334155]"} ${clickedControl === `speed-${i}` ? "scale-[0.96]" : ""}`}
-                >
-                  <span className="text-lg font-extrabold tabular-nums">{preset.toFixed(1)}</span>
-                  <span className="mt-0.5 text-[9px] font-bold uppercase tracking-widest opacity-70">{["Slow", "Med", "Fast"][i]}</span>
-                </button>
-              ))}
-            </div>
-          </section>
-
-          {/* Planting Actions */}
-          <section className="flex-1 rounded-2xl border border-[#e2e8f0] bg-white p-5 shadow-[0_4px_16px_rgba(15,23,42,0.06)]">
-            <p className="mb-4 text-[10px] font-semibold uppercase tracking-[0.18em] text-[#16a34a]">Planting Actions</p>
-            <div className={`grid gap-3 sm:grid-cols-3 transition-opacity ${isManual ? "" : "opacity-25 pointer-events-none"}`}>
-              {PLANTING_ACTIONS.map((item) => (
-                <button
-                  key={item.key}
-                  type="button"
-                  disabled={!isManual || actionStates[item.key] === "active"}
-                  onClick={() => {
-                    triggerClickFeedback(`plant-${item.key}`);
-                    runPlantingAction(item.key, item.label);
-                  }}
-                  className={`flex flex-col items-center rounded-xl border py-5 text-sm font-bold transition active:scale-95 ${
-                    actionStates[item.key] === "active"
-                      ? "border-[#bfdbfe] bg-[#eff6ff] text-[#2563eb]"
-                      : actionStates[item.key] === "success"
-                      ? "border-[#bbf7d0] bg-[#f0fdf4] text-[#15803d]"
-                      : actionStates[item.key] === "error"
-                      ? "border-[#fca5a5] bg-[#fef2f2] text-[#dc2626]"
-                      : "border-[#e2e8f0] bg-[#f8fafc] text-[#475569] hover:border-[#bbf7d0] hover:text-[#16a34a]"
-                  } ${clickedControl === `plant-${item.key}` ? "scale-[0.96]" : ""}`}
-                >
-                  <span className="text-3xl leading-none">{PLANTING_ICONS[item.key]}</span>
-                  <span className="mt-2 text-xs font-semibold">{item.label}</span>
-                  <span className={`mt-2 rounded-md border px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide ${actionStyle(actionStates[item.key])}`}>
-                    {actionStates[item.key]}
-                  </span>
-                </button>
-              ))}
-            </div>
-          </section>
+          {/* Speed Control - posted directly */}
+          <div className="mb-4 flex items-center justify-between">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#d97706]">Speed Control</p>
+            <span className={`rounded-lg border border-[#e2e8f0] bg-[#f8fafc] px-3 py-1 font-extrabold tabular-nums leading-none ${isManual ? "text-[#b45309]" : "text-[#94a3b8]"}`}>
+              {currentSpeed.toFixed(1)} <span className="text-[11px] font-medium text-[#94a3b8]">m/s</span>
+            </span>
+          </div>
+          <div className={`flex gap-2 transition-opacity ${isManual ? "" : "opacity-25 pointer-events-none"}`}>
+            {SPEED_PRESETS.map((preset, i) => (
+              <button
+                key={preset}
+                type="button"
+                disabled={!isManual}
+                onClick={() => {
+                  triggerClickFeedback(`speed-${i}`);
+                  latestSpeedIndexRef.current = i;
+                  setSpeedIndex(i);
+                  issueCommand(`Set Speed ${preset.toFixed(1)} m/s`);
+                }}
+                className={`flex flex-1 flex-col items-center rounded-xl border py-4 transition active:scale-95 ${speedIndex === i ? "border-[#f59e0b] bg-[#fffbeb] text-[#b45309] shadow-[0_0_0_3px_rgba(245,158,11,0.12)]" : "border-[#e2e8f0] bg-[#f8fafc] text-[#64748b] hover:border-[#cbd5e1] hover:text-[#334155]"} ${clickedControl === `speed-${i}` ? "scale-[0.96]" : ""}`}
+              >
+                <span className="text-lg font-extrabold tabular-nums">{preset.toFixed(1)}</span>
+                <span className="mt-0.5 text-[9px] font-bold uppercase tracking-widest opacity-70">{["Slow", "Med", "Fast"][i]}</span>
+              </button>
+            ))}
+          </div>
+          {/* Planting Actions - posted directly */}
+          <p className="mb-4 mt-6 text-[10px] font-semibold uppercase tracking-[0.18em] text-[#16a34a]">Planting Actions</p>
+          <div className={`grid gap-3 sm:grid-cols-3 transition-opacity ${isManual ? "" : "opacity-25 pointer-events-none"}`}>
+            {PLANTING_ACTIONS.map((item) => (
+              <button
+                key={item.key}
+                type="button"
+                disabled={!isManual || actionStates[item.key] === "active"}
+                onClick={() => {
+                  triggerClickFeedback(`plant-${item.key}`);
+                  runPlantingAction(item.key, item.label);
+                }}
+                className={`flex flex-col items-center rounded-xl border py-5 text-sm font-bold transition active:scale-95 ${
+                  actionStates[item.key] === "active"
+                    ? "border-[#bfdbfe] bg-[#eff6ff] text-[#2563eb]"
+                    : actionStates[item.key] === "success"
+                    ? "border-[#bbf7d0] bg-[#f0fdf4] text-[#15803d]"
+                    : actionStates[item.key] === "error"
+                    ? "border-[#fca5a5] bg-[#fef2f2] text-[#dc2626]"
+                    : "border-[#e2e8f0] bg-[#f8fafc] text-[#475569] hover:border-[#bbf7d0] hover:text-[#16a34a]"
+                } ${clickedControl === `plant-${item.key}` ? "scale-[0.96]" : ""}`}
+              >
+                <span className="text-3xl leading-none">{PLANTING_ICONS[item.key]}</span>
+                <span className="mt-2 text-xs font-semibold">{item.label}</span>
+                <span className={`mt-2 rounded-md border px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide ${actionStyle(actionStates[item.key])}`}>
+                  {actionStates[item.key]}
+                </span>
+              </button>
+            ))}
+          </div>
         </div>
       </div>
 
